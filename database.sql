@@ -33,7 +33,7 @@ CREATE TABLE Song(
 );
 
 CREATE TABLE User(
-    firebaseID VARCHAR(100), -- Primary Key
+    firebaseID INT, -- Primary Key
     shippingAddress VARCHAR(100),
     invoiceAddress VARCHAR(100),
     idCartItem INT -- Foreign Key referencing CartItem.idCartItem
