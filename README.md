@@ -8,7 +8,6 @@ Make sure to create a user to access the database accordingly. <br>
 `ALTER USER '<username>'@'%' IDENTIFIED WITH mysql_native_password BY '<password>';`<br>
 
 Make sure to open the connections to the database. <br>
-
 ```
 mariadbd --help --verbose
 mariadbd  Ver 10.11.5-MariaDB for linux-systemd on x86_64 (MariaDB Server)
@@ -31,3 +30,9 @@ In the `/etc/my.conf` edit the following lines: <br>
     bind-address = 0.0.0.0
     ...
 ```
+
+After everithing has been configured, log in into mariaDB and run the scripts in the following order: <br>
+
+`source /home/vlad/MOPS-backend/ldatabase.sql;`<br>
+`source /home/vlad/MOPS-backend/database_config.sql;`<br>
+`source /home/vlad/MOPS-backend/load_database.sql;`<br>
