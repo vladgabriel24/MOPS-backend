@@ -31,8 +31,26 @@ In the `/etc/my.conf` edit the following lines: <br>
     ...
 ```
 
-After everithing has been configured, log in into mariaDB and run the scripts in the following order: <br>
+After everything has been configured, log in into mariaDB and run the scripts in the following order: <br>
 
-`source /home/vlad/MOPS-backend/ldatabase.sql;`<br>
-`source /home/vlad/MOPS-backend/database_config.sql;`<br>
-`source /home/vlad/MOPS-backend/load_database.sql;`<br>
+`source /db/database.sql;`<br>
+`source /db/database_config.sql;`<br>
+`source /db/MOPS-backend/load_database.sql;`<br>
+or run
+ `source /db/database-init.sql`
+
+ ## Setting up the Backend
+ Requirements: 
+ 1.You should have python installed on your system
+
+ 2.You should instal and activate the virtual environment (example for Linux)
+ sudo apt install python3-venv python3-dev
+ python3 -m venv venv
+ source venv/bin/activate
+
+ 3.You should install Flask and SQLAlchemy
+ 4.You should modify line 10 (# Replace with your ip ) from /app/__init__.py
+ 5.You should run `python main.py` in venv to run the project
+
+
+
