@@ -20,12 +20,6 @@ CREATE TABLE Genre(
     nameGenre VARCHAR(100)
 );
 
-CREATE TABLE CartItem(
-    idCartItem INT, -- Primary Key
-    discItem VARCHAR(100),
-    quantity INT
-);
-
 CREATE TABLE Song(
     idSong INT, -- Primary Key
     songName VARCHAR(100),
@@ -35,8 +29,14 @@ CREATE TABLE Song(
 CREATE TABLE User(
     firebaseID INT, -- Primary Key
     shippingAddress VARCHAR(100),
-    invoiceAddress VARCHAR(100),
-    idCartItem INT -- Foreign Key referencing CartItem.idCartItem
+    invoiceAddress VARCHAR(100)
+);
+
+CREATE TABLE CartItem(
+    idCartItem INT, -- Primary Key
+    firebaseID INT, -- Foreign Key referencing User.firebaseID
+    discItem VARCHAR(100),
+    quantity INT
 );
 
 CREATE TABLE SpotifyLikedSong(
