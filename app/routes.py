@@ -18,13 +18,37 @@ def about():
 
 @main_routes.route('/discs', methods=['GET'])
 def get_disc_by_id():
-    disc_id = request.args.get('id', type=int)
+    
+    discs = Disc.query.all()
+    if discs is None:
+        abort(500, description="Backend error")
 
-    if disc_id is None:
-        abort(400, description="Disc ID is required")
-    disc = Disc.query.get(disc_id)
+    discs_list = [
+        {
+            "idDisc": disc.idDisc,
+            "label": disc.label,
+            "title": disc.title,
+            "format": disc.format,
+            "price": disc.price
+        }
+        for disc in discs
+    ]
+
+    return jsonify(discs_list)
+
+@main_routes.route('/disc', methods=['GET'])
+def get_disc_by_title():
+    
+    disc_title = request.args.get('title', type=str)
+    print(disc_title)
+
+    if disc_title is None:
+        abort(400, description="Title is required")
+
+    disc = Disc.query.filter(Disc.title == disc_title).first()
+    print(disc)
     if disc is None:
-        abort(404, description="Disc not found")
+        abort(500, description="Backend error")
 
     return jsonify({
         "idDisc": disc.idDisc,
