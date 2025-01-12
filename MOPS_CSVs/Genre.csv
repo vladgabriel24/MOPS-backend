@@ -1,5 +1,21 @@
-idGenre,nameGenre
-1,Rock
-2,Pop
-3,Classical
-4,Jazz
+idGenre,idSong,nameGenre
+1,1,Indie Pop
+2,2,R&B
+3,3,Classic Rock
+4,4,Synth-Pop
+5,5,Alternative Rock
+6,6,Punk Rock
+7,7,Folk
+8,8,Electronic/Dance
+9,9,Blues Rock
+10,10,New Wave
+11,11,Pop Rock
+12,12,Disco
+13,13,Singer-Songwriter
+14,14,Progressive Rock
+15,15,Psychedelic Rock
+16,16,Hip-Hop
+17,17,Indie Folk
+18,18Chillwave
+19,19,Synthwave
+20,20,Hard Rock

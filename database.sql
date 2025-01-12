@@ -17,11 +17,13 @@ CREATE TABLE Artist(
 
 CREATE TABLE Genre(
     idGenre INT, -- Primary Key
+    idSong INT, -- Foreign Key referencing Song.idSong
     nameGenre VARCHAR(100)
 );
 
 CREATE TABLE CartItem(
     idCartItem INT, -- Primary Key
+    firebaseID INT, -- Foreign Key referencing User.firebaseID
     discItem VARCHAR(100),
     quantity INT
 );
@@ -35,19 +37,12 @@ CREATE TABLE Song(
 CREATE TABLE User(
     firebaseID INT, -- Primary Key
     shippingAddress VARCHAR(100),
-    invoiceAddress VARCHAR(100),
-    idCartItem INT -- Foreign Key referencing CartItem.idCartItem
+    invoiceAddress VARCHAR(100)
 );
 
 CREATE TABLE SpotifyLikedSong(
     idSpotifyLikedSong INT, -- Primary Key
     firebaseID INT, -- Foreign Key referencing User.firebaseID
-    idSong INT -- Foreign Key referencing Song.idSong
-);
-
-CREATE TABLE SongGenre(
-    idSongGenre INT, -- Primary Key
-    idGenre INT, -- Foreign Key referencing Genre.idGenre
     idSong INT -- Foreign Key referencing Song.idSong
 );
 
