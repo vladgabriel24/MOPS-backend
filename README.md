@@ -33,9 +33,9 @@ In the `/etc/my.conf` edit the following lines: <br>
 
 After everything has been configured, log in into mariaDB and run the scripts in the following order: <br>
 
-`source /db/database.sql;`<br>
-`source /db/database_config.sql;`<br>
-`source /db/MOPS-backend/load_database.sql;`<br>
+`source ./db/database.sql;`<br>
+`source ./db/database_config.sql;`<br>
+`source ./db/load_database.sql;`<br>
 or run
  `source /db/database-init.sql`
 
@@ -49,6 +49,10 @@ or run
  source venv/bin/activate
 
  3.You should install Flask and SQLAlchemy
+  pip install Flask
+  pip install Flask-SQLAlchemy
+  pip install mysql-connector-python
+
  4.You should modify line 10 (# Replace with your ip ) from /app/__init__.py
  5.You should run `python main.py` in venv to run the project
 
