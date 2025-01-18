@@ -1,11 +1,13 @@
 from flask import Blueprint, request, jsonify, abort, session
-from .models import User, Disc
+from .models import *
 from .utils import *
 from . import db
+from flask_cors import CORS
 # from firebase_admin import auth  # Firebase Admin SDK for token verification
 # from functools import wraps  # For creating a decorator
 
 main_routes = Blueprint('main', __name__)
+CORS(main_routes)  # Allow all origins
 
 
 @main_routes.route('/about')
@@ -17,7 +19,7 @@ def about():
 
 
 @main_routes.route('/discs', methods=['GET'])
-def get_disc_by_id():
+def get_disc():
     
     discs = Disc.query.all()
     if discs is None:
@@ -36,7 +38,7 @@ def get_disc_by_id():
 
     return jsonify(discs_list)
 
-@main_routes.route('/disc', methods=['GET'])
+@main_routes.route('/search-disc-by-title', methods=['GET'])
 def get_disc_by_title():
     
     disc_title = request.args.get('title', type=str)
@@ -50,6 +52,89 @@ def get_disc_by_title():
     if disc is None:
         abort(500, description="Backend error")
 
+    return jsonify({
+        "idDisc": disc.idDisc,
+        "label": disc.label,    
+        "title": disc.title,   
+        "format": disc.format,
+        "price": disc.price
+    })
+
+@main_routes.route('/search-discs-by-artist', methods=['GET'])
+def get_discs_by_artist():
+    # Get the artist name from query parameters
+    artist_name = request.args.get('artist', type=str)
+    if not artist_name:
+        abort(400, description="Artist parameter is required")
+    # Query to find the artist
+    artist = Artist.query.filter_by(nameArtist=artist_name).first()
+    if artist is None:
+        abort(404, description=f"No artist found with name '{artist_name}'")
+    print(artist.nameArtist)
+    # Query to find all songs by the artist
+    song_ids = [feature.idSong for feature in artist.song_artist_features]
+
+    # Query to find all discs containing these songs
+    disc_ids = {disc_song.idDisc for disc_song in DiscSong.query.filter(DiscSong.idSong.in_(song_ids)).all()}
+
+    # Retrieve all discs
+    discs = Disc.query.filter(Disc.idDisc.in_(disc_ids)).all()
+    if not discs:
+        abort(404, description=f"No discs found for artist '{artist_name}'")
+
+    # Return the results as JSON
+    return jsonify([
+        {
+            "idDisc": disc.idDisc,
+            "label": disc.label,
+            "title": disc.title,
+            "format": disc.format,
+            "price": disc.price
+        } for disc in discs
+    ])
+
+@main_routes.route('/search-discs-by-genre', methods=['GET'])
+def get_discs_by_genre():
+    # Get the genre name from query parameters
+    genre_name = request.args.get('genre', type=str)
+    if not genre_name:
+        abort(400, description="Genre parameter is required")
+
+    # Query to find the genre
+    genre = Genre.query.filter_by(nameGenre=genre_name).first()
+    if not genre:
+        abort(404, description=f"No genre found with name '{genre_name}'")
+
+    # Query to find all songs associated with the genre
+    song_ids = [song_genre.idSong for song_genre in genre.song_genres]
+
+    # Query to find all discs containing these songs
+    disc_ids = {disc_song.idDisc for disc_song in DiscSong.query.filter(DiscSong.idSong.in_(song_ids)).all()}
+
+    # Retrieve all discs
+    discs = Disc.query.filter(Disc.idDisc.in_(disc_ids)).all()
+    if not discs:
+        abort(404, description=f"No discs found for genre '{genre_name}'")
+
+    # Return the results as JSON
+    return jsonify([
+        {
+            "idDisc": disc.idDisc,
+            "label": disc.label,
+            "title": disc.title,
+            "format": disc.format,
+            "price": disc.price
+        } for disc in discs
+    ])
+
+@main_routes.route('/disc', methods=['GET'])
+def get_disc_by_id():
+    disc_id = request.args.get('id', type=int)
+    if disc_id is None:
+        abort(400, description="Disc ID is required")
+    disc = Disc.query.get(disc_id)
+    if disc is None:
+        abort(404, description="Disc not found")
     return jsonify({
         "idDisc": disc.idDisc,
         "label": disc.label,    
@@ -125,3 +210,120 @@ def logout():
     # Clear the session to log out the user
     session.pop('firebase_id', None)
     return jsonify({'message': 'Logged out successfully'}), 200
+
+@main_routes.route('/add-to-cart', methods=['POST'])
+def add_to_cart():
+    # Check if the user is logged in by verifying the session
+    if 'firebase_id' not in session:
+        abort(403, description="Unauthorized access. Please log in.")
+
+    data = request.get_json()  
+    
+    disc_item = data.get('discItem')  
+    quantity = data.get('quantity')  
+    
+    if not disc_item or not quantity:
+        abort(400, description="Disc item and quantity are required")
+    
+    if quantity <= 0:
+        abort(400, description="Quantity must be a positive integer")
+    
+    firebase_id = session['firebase_id']
+    user = User.query.filter_by(firebaseID=firebase_id).first()
+
+    if not user:
+        abort(404, description="User not found")
+    
+    disc = Disc.query.filter_by(title=disc_item).first()
+    if not disc:
+        abort(404, description="Disc not found")
+    
+    new_cart_item = CartItem(firebaseID=firebase_id, discItem=disc_item, quantity=quantity)
+    
+    db.session.add(new_cart_item)
+    db.session.commit()
+    
+    return jsonify({
+        "message": "Item added to cart successfully",
+        "cartItem": {
+            "idCartItem": new_cart_item.idCartItem,
+            "firebaseID": new_cart_item.firebaseID,
+            "discItem": new_cart_item.discItem,
+            "quantity": new_cart_item.quantity
+        }
+    }), 201  # Return HTTP 201 (Created) response
+
+@main_routes.route('/delete-cart-item', methods=['DELETE'])
+def delete_cart_item():
+    # Check if the user is logged in by verifying the session
+    if 'firebase_id' not in session:
+        abort(403, description="Unauthorized access. Please log in.")
+    
+    # Get the cart item ID from the request
+    cart_item_id = request.args.get('id', type=int)  # Assume the ID is passed as a query parameter
+    
+    # Validate the cart item ID
+    if cart_item_id is None:
+        abort(400, description="Cart item ID is required")
+    
+    # Retrieve the CartItem from the database
+    cart_item = CartItem.query.get(cart_item_id)
+    
+    # Check if the CartItem exists
+    if cart_item is None:
+        abort(404, description="Cart item not found")
+    
+    # Ensure the CartItem belongs to the authenticated user (firebase_id check)
+    if cart_item.firebaseID != session['firebase_id']:
+        abort(403, description="You are not authorized to delete this item")
+    
+    # Delete the CartItem from the database
+    db.session.delete(cart_item)
+    db.session.commit()
+    
+    # Return a success response
+    return jsonify({
+        "message": "Cart item deleted successfully"
+    }), 200
+
+@main_routes.route('/update-cart-item', methods=['PUT'])
+def update_cart_item_quantity():
+    # Check if the user is logged in by verifying the session
+    if 'firebase_id' not in session:
+        abort(403, description="Unauthorized access. Please log in.")
+    
+    # Get the cart item ID and new quantity from the request
+    cart_item_id = request.args.get('id', type=int)  # The cart item ID as a query parameter
+    new_quantity = request.json.get('quantity')  # New quantity sent as JSON body
+    
+    # Validate cart item ID and new quantity
+    if cart_item_id is None:
+        abort(400, description="Cart item ID is required")
+    
+    if new_quantity is None or new_quantity <= 0:
+        abort(400, description="Quantity must be greater than 0")
+
+    # Retrieve the CartItem from the database
+    cart_item = CartItem.query.get(cart_item_id)
+    
+    # Check if the CartItem exists
+    if cart_item is None:
+        abort(404, description="Cart item not found")
+    
+    # Ensure the CartItem belongs to the authenticated user (firebase_id check)
+    if cart_item.firebaseID != session['firebase_id']:
+        abort(403, description="You are not authorized to update this item")
+    
+    # Update the quantity
+    cart_item.quantity = new_quantity
+    
+    # Commit the changes to the database
+    db.session.commit()
+    
+    # Return a success response
+    return jsonify({
+        "message": "Cart item quantity updated successfully",
+        "idCartItem": cart_item.idCartItem,
+        "new_quantity": cart_item.quantity
+    }), 200
+
