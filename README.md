@@ -52,6 +52,8 @@ or run
   pip install Flask
   pip install Flask-SQLAlchemy
   pip install mysql-connector-python
+  pip install flask-cors
+
 
  4.You should modify line 10 (# Replace with your ip ) from /app/__init__.py
  5.You should run `python main.py` in venv to run the project

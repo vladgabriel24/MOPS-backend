@@ -1,11 +1,13 @@
 from flask import Blueprint, request, jsonify, abort, session
-from .models import User, Disc, CartItem
+from .models import *
 from .utils import *
 from . import db
+from flask_cors import CORS
 # from firebase_admin import auth  # Firebase Admin SDK for token verification
 # from functools import wraps  # For creating a decorator
 
 main_routes = Blueprint('main', __name__)
+CORS(main_routes)  # Allow all origins
 
 
 @main_routes.route('/about')
@@ -36,7 +38,7 @@ def get_disc():
 
     return jsonify(discs_list)
 
-@main_routes.route('/search-disc', methods=['GET'])
+@main_routes.route('/search-disc-by-title', methods=['GET'])
 def get_disc_by_title():
     
     disc_title = request.args.get('title', type=str)
@@ -57,6 +59,73 @@ def get_disc_by_title():
         "format": disc.format,
         "price": disc.price
     })
+
+@main_routes.route('/search-discs-by-artist', methods=['GET'])
+def get_discs_by_artist():
+    # Get the artist name from query parameters
+    artist_name = request.args.get('artist', type=str)
+    if not artist_name:
+        abort(400, description="Artist parameter is required")
+    # Query to find the artist
+    artist = Artist.query.filter_by(nameArtist=artist_name).first()
+    if artist is None:
+        abort(404, description=f"No artist found with name '{artist_name}'")
+    print(artist.nameArtist)
+    # Query to find all songs by the artist
+    song_ids = [feature.idSong for feature in artist.song_artist_features]
+
+    # Query to find all discs containing these songs
+    disc_ids = {disc_song.idDisc for disc_song in DiscSong.query.filter(DiscSong.idSong.in_(song_ids)).all()}
+
+    # Retrieve all discs
+    discs = Disc.query.filter(Disc.idDisc.in_(disc_ids)).all()
+    if not discs:
+        abort(404, description=f"No discs found for artist '{artist_name}'")
+
+    # Return the results as JSON
+    return jsonify([
+        {
+            "idDisc": disc.idDisc,
+            "label": disc.label,
+            "title": disc.title,
+            "format": disc.format,
+            "price": disc.price
+        } for disc in discs
+    ])
+
+@main_routes.route('/search-discs-by-genre', methods=['GET'])
+def get_discs_by_genre():
+    # Get the genre name from query parameters
+    genre_name = request.args.get('genre', type=str)
+    if not genre_name:
+        abort(400, description="Genre parameter is required")
+
+    # Query to find the genre
+    genre = Genre.query.filter_by(nameGenre=genre_name).first()
+    if not genre:
+        abort(404, description=f"No genre found with name '{genre_name}'")
+
+    # Query to find all songs associated with the genre
+    song_ids = [song_genre.idSong for song_genre in genre.song_genres]
+
+    # Query to find all discs containing these songs
+    disc_ids = {disc_song.idDisc for disc_song in DiscSong.query.filter(DiscSong.idSong.in_(song_ids)).all()}
+
+    # Retrieve all discs
+    discs = Disc.query.filter(Disc.idDisc.in_(disc_ids)).all()
+    if not discs:
+        abort(404, description=f"No discs found for genre '{genre_name}'")
+
+    # Return the results as JSON
+    return jsonify([
+        {
+            "idDisc": disc.idDisc,
+            "label": disc.label,
+            "title": disc.title,
+            "format": disc.format,
+            "price": disc.price
+        } for disc in discs
+    ])
 
 @main_routes.route('/disc', methods=['GET'])
 def get_disc_by_id():

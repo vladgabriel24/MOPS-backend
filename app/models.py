@@ -32,7 +32,6 @@ class Artist(db.Model):
     def __repr__(self):
         return f"Artist('{self.idArtist}', '{self.nameArtist}')"
 
-# Genre Model
 class Genre(db.Model):
     __tablename__ = 'Genre'
 
@@ -42,7 +41,7 @@ class Genre(db.Model):
     def __repr__(self):
         return f"Genre('{self.idGenre}', '{self.nameGenre}')"
 
-# Song Model
+
 class Song(db.Model):
     __tablename__ = 'Song'
 
@@ -53,9 +52,7 @@ class Song(db.Model):
     def __repr__(self):
         return f"Song('{self.idSong}', '{self.songName}', '{self.releaseDate}')"
 
-# User Model
 
-# CartItem Model
 class CartItem(db.Model):
     __tablename__ = 'CartItem'
 
