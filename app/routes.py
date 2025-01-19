@@ -327,3 +327,33 @@ def update_cart_item_quantity():
         "new_quantity": cart_item.quantity
     }), 200
 
+@main_routes.route('/songs', methods=['GET'])
+def get_songs_by_disc():
+    # Retrieve the disc_id from query parameters
+    disc_id = request.args.get('disc_id', type=int)
+
+    # If disc_id is not provided, return a bad request error
+    if not disc_id:
+        abort(400, description="Disc ID is required")
+
+    # Query the DiscSong table to find all songs related to the given disc ID
+    disc_songs = DiscSong.query.filter_by(idDisc=disc_id).all()
+    
+    # If no disc songs are found, return an error message
+    if not disc_songs:
+        abort(404, description=f"No songs found for Disc ID {disc_id}")
+
+    # Get the song details
+    songs = []
+    for disc_song in disc_songs:
+        song = Song.query.get(disc_song.idSong)
+        if song:
+            songs.append({
+                "idSong": song.idSong,
+                "songName": song.songName,
+                "releaseDate": song.releaseDate.strftime('%Y-%m-%d')  # Format date if needed
+            })
+    
+    # Return the list of songs
+    return jsonify(songs)
+
