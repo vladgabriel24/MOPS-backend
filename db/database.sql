@@ -27,7 +27,9 @@ CREATE TABLE Song(
 );
 
 CREATE TABLE User(
-    firebaseID INT, -- Primary Key
+    firebaseID BIGINT, -- Primary Key
+    email TEXT UNIQUE NOT NULL,
+    passwd TEXT NOT NULL,
     shippingAddress VARCHAR(100),
     invoiceAddress VARCHAR(100)
 );

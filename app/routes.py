@@ -1,13 +1,19 @@
-from flask import Blueprint, request, jsonify, abort, session
+from app import init_bcrypt
+from flask import Blueprint, request, redirect, jsonify, abort, session
 from .models import *
+import requests
 from .utils import *
 from . import db
 from flask_cors import CORS
+import uuid
+
+
 # from firebase_admin import auth  # Firebase Admin SDK for token verification
 # from functools import wraps  # For creating a decorator
 
 main_routes = Blueprint('main', __name__)
 CORS(main_routes)  # Allow all origins
+bcrypt = init_bcrypt()
 
 
 @main_routes.route('/about')
@@ -145,65 +151,36 @@ def get_disc_by_id():
 
 @main_routes.route('/create-user', methods=['POST'])
 def create_user():
-    # Extracting user data from the incoming JSON request
-    data = request.get_json()
+    data = request.json
+    email = data['email']
+    passwd = data['password']
+    shippingAddress = data['shippingAddress']
+    invoiceAddress = data['invoiceAddress']
+    
+    if User.query.filter_by(email=email).first():
+        return jsonify({'message': 'email already exists'}), 400
 
-    # Ensure all required fields are present
-    firebase_id = data.get('firebaseID')
-    shipping_address = data.get('shippingAddress')
-    invoice_address = data.get('invoiceAddress')
-
-    if not firebase_id:
-        abort(400, description="Firebase ID is required")
-
-    # Create a new user instance
-    new_user = User(
-        firebaseID=firebase_id,
-        shippingAddress=shipping_address,
-        invoiceAddress=invoice_address
-    )
-
+    hashed_passwd = bcrypt.generate_password_hash(passwd).decode('utf-8')
+    user_uid = uuid.uuid4().int & 0xFFFF  # Generate a random 16 integer UID
+    new_user = User(firebaseID=user_uid, email=email, passwd=hashed_passwd, shippingAddress=shippingAddress, invoiceAddress=invoiceAddress)
     db.session.add(new_user)
+    db.session.commit()
 
-    # Try committing the user to the database
-    try:
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()  # Rollback in case of an error
-        abort(500, description="Error creating user: " + str(e))
-
-    # Return the newly created user in the response
-    return jsonify({
-        'firebaseID': new_user.firebaseID,
-        'shippingAddress': new_user.shippingAddress,
-        'invoiceAddress': new_user.invoiceAddress,
-        'idCartItem': new_user.idCartItem
-    }), 201
+    return jsonify({'message': 'User registered successfully'})
 
 @main_routes.route('/login', methods=['POST'])
 def login():
-    # Extract user data from the incoming JSON request
-    data = request.get_json()
+    data = request.json
+    email = data['email']
+    password = data['password']
+    
+    user = User.query.filter_by(email=email).first()
+    if not user or not bcrypt.check_password_hash(user.passwd, password):
+        return jsonify({'message': 'Invalid email or password'}), 401
 
-    firebase_id = data.get('firebaseID')
-
-    # Check if the firebase_id is provided
-    if not firebase_id:
-        abort(400, description="Firebase ID is required")
-
-    # Check if the firebase_id exists in the database
-    user = User.query.filter_by(firebaseID=firebase_id).first()
-
-    if not user:
-        abort(404, description="User not found")
-
-    # Store the firebase_id in the session (to keep the user logged in)
-    session['firebase_id'] = user.firebaseID
-
-    return jsonify({
-        'message': 'User logged in successfully',
-        'firebaseID': user.firebaseID
-    }), 200
+    # Store UID in session for authenticated user
+    session['firebase_id'] = str(user.firebaseID)
+    return jsonify({'message': 'Logged in successfully', 'uid': str(user.firebaseID)})
 
 @main_routes.route('/logout', methods=['POST'])
 def logout():
@@ -327,3 +304,30 @@ def update_cart_item_quantity():
         "new_quantity": cart_item.quantity
     }), 200
 
+@main_routes.route('/spotify-liked-songs', methods=['POST'])
+def liked_songs():
+    data = request.json
+    if not data:
+        return jsonify({'error': 'Spotify liked songs data not send correctly'}), 500
+
+    liked_songs = [
+
+        {
+            'track_name': item['track']['name'],
+            'artist': [artist['name'] for artist in item['track']['artists']],
+        }
+        for item in data 
+    ]
+
+    firebase_ID = session.get('firebase_id')
+
+    for liked_song in liked_songs:
+        song = Song.query.filter_by(songName=liked_song['track_name']).first()
+        if song:
+            liked_song_entry = SpotifyLikedSong.query.filter_by(firebaseID=firebase_ID, idSong=song.idSong).first()
+            if not liked_song_entry:
+                liked_song_entry = SpotifyLikedSong(firebaseID=firebase_ID, idSong=song.idSong)
+                db.session.add(liked_song_entry)
+                db.session.commit()
+    
+    return jsonify(data), 200

@@ -4,11 +4,13 @@ class User(db.Model):
     __tablename__ = 'User'
 
     firebaseID = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(80), unique=True, nullable=False)
+    passwd = db.Column(db.String(120), nullable=False)
     shippingAddress = db.Column(db.String(100), nullable=True)
     invoiceAddress = db.Column(db.String(100), nullable=True)
 
     def __repr__(self):
-        return f"User('{self.firebaseID}', '{self.shippingAddress}', '{self.invoiceAddress}')"
+        return f"User('{self.firebaseID}', '{self.email}', '{self.passwd}', '{self.shippingAddress}', '{self.invoiceAddress}')"
 
 class Disc(db.Model):
     __tablename__ = 'Disc'
